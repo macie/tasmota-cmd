@@ -1,0 +1,57 @@
+#!/bin/sh
+
+TASMOTA_VERSION='2023.07.10'
+
+tasmota_run() {
+	while read -r TASMOTA_CMD; do
+		if [ -z "$(printf '%s' "${TASMOTA_CMD}" | grep -v '^#')" ]; then
+			continue
+		fi
+		TASMOTA_CMD=$(echo "${TASMOTA_CMD}" | sed -e 's/\./%2E/g' -e 's/=/%20/g' -e 's/\+/%2B/g' -e 's/ /\+/g')
+		TASMOTA_URL="http://${TASMOTA_ADDRESS}/cm?cmnd=${TASMOTA_CMD}"
+		printf '> GET %s\n< ' "${TASMOTA_URL}"
+		curl "${TASMOTA_URL}"
+		printf '\n\n'
+	done
+}
+
+# MAIN ROUTINE
+{
+	case $# in
+		1)
+		    case $1 in
+		        -h|--help)
+		          cat >&2 <<-'EOF'
+								tasmota-cmd - send commands to Tasmota device
+
+								Usage:
+								  tasmota-cmd [options] DEVICE_ADDRESS
+
+								Options:
+								  -h, --help                      Show this help and exit.
+								  -v, --version                   Show version number and exit.
+							EOF
+		          exit 0
+		        	;;
+
+		        -v|--version)
+		          printf 'tasmota-cmd %s' "${TASMOTA_VERSION}" >&2
+		          exit 0
+		          ;;
+
+		        *)
+							TASMOTA_ADDRESS="$1"
+		          ;;
+			esac
+			;;
+
+		*)
+			printf 'ERROR: invalid usage. Try: %s -h\n' "$0" >&2
+			exit 64  # EX_USAGE
+			;;
+	esac
+
+	tasmota_run
+
+	exit 0
+}
